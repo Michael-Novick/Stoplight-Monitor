@@ -1,0 +1,140 @@
+# Michael Novick
+# July 2017
+# Adapted from code written by Dr. Steve Mitchell
+
+import numpy as np
+#import matplotlib
+#import matplotlib.pyplot as plt
+#import argparse
+import cv2
+import imutils
+import time
+
+
+def main():
+    height, width, screen_center, cap = initialize_video_stream()
+    stoplights = identify_stoplights(cap, height)
+    main_stoplight = identify_main_stoplight(stoplights, screen_center)
+    color = monitor_stoplight(main_stoplight, cap, height, width)
+    print(color)
+
+
+def initialize_video_stream():
+    # identify filename of video to be analyzed
+    cap = cv2.VideoCapture('MOV_0002.AVI')
+    # can also identify computer port with incoming camera stream
+    height, width = cap.get(cv2.CAP_PROP_FRAME_HEIGHT), cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+    screen_center = width / 2
+    return height, width, screen_center, cap
+
+
+def identify_stoplights(cap, height):  # todo
+    stoplights = []
+    snip_height = height / 2
+    while cap.isOpened():  # does the video ever close?
+        # read video frame & show on screen
+        ret, frame = cap.read()  # ret should be true or 1, frame should be a 3D array?
+        frame = frame[0: snip_height, 0:]
+        vertices = None  # identify vertices with processing and feature detection
+        for corners in vertices:
+            if True:  # return to this function
+                stoplights.append(Stoplight(corners))
+    return stoplights
+    # in this method we need to iterate through the video stream until stoplights are detected. More iterations need to
+    # occur after the first stoplights are detected, and work needs to be done to tell each stoplight apart. Optical
+    # flow may be necessary to track individual stoplights, so duplicate detection is avoided. Once all stoplights are
+    # detected the code can proceed
+
+    # maybe stoplights can be detected from the center >> outwards, and first stoplight detected is used. Perhaps use
+    # aspect ratio, because hypothetically the aspect ratio of a stoplight should be roughly 3:1 (3 circles in a row)
+
+
+def identify_main_stoplight(stoplights, screen_center):
+    difference = screen_center * 2
+    for stoplight in stoplights:
+        distance_from_center = np.abs(stoplight.find_stoplight_center()-screen_center)
+        if distance_from_center <= difference:
+            winning_stoplight = stoplight
+            difference = distance_from_center
+    main_stoplight = MainStoplight(winning_stoplight)
+    return main_stoplight
+
+
+def monitor_stoplight(stoplight, cap, height, width):  # todo
+    # Write code to monitor stoplight status
+    # check if need to change snip based on condition
+
+    snip_bounds = redefine_snip(stoplight, height, width)
+
+    while cap.isOpened():  # does the video ever close?
+        # read video frame & show on screen
+        ret, frame = cap.read()  # ret should be true or 1, frame should be a 3D array?
+        if window_resize_check(stoplight):
+            stoplight.redefine_position(stoplight)
+            snip_bounds = redefine_snip(stoplight, height, width)
+        snip = frame[snip_bounds[0, 1]:snip_bounds[1, 1], snip_bounds[0, 0]:snip_bounds[1, 0]]
+        color = detect_signal(snip)
+        # if color == 'green':
+        #     break
+        return color
+    # snip_bounds = stoplight.vertices
+    # return color
+
+
+def window_resize_check(stoplight): # todo
+    # optical flow stuff, see if stoplight is getting too close to snipping bounds
+    if None:
+        return True
+    else:
+        return False
+
+
+def detect_signal(frame):  # todo
+    color = 'red'
+    return color
+    # image processing is required here to identify the color of the traffic signal
+
+
+def redefine_snip(stoplight, height, width):  # todo
+    snip = np.array()
+    snip[0, 0] = stoplight.vertices[1, 1] - stoplight.width
+    snip[0, 1] = stoplight.vertices[1, 0] - stoplight.height
+    snip[1, 0] = stoplight.vertices[3, 1] + stoplight.width
+    snip[1, 1] = stoplight.vertices[3, 0] + stoplight.height
+
+    if snip[0, 0] < 0:
+        snip[0, 0] = 0
+    if snip[0, 1] < 0:
+        snip[0, 1] = 0
+    if snip[1, 0] > width:
+        snip[1, 0] = width
+    if snip[1, 1] > height:
+        snip[1, 1] = height
+
+    return snip
+
+
+class Stoplight:
+    def __init__(self, vertices):
+        self.vertices = vertices
+        self.height = vertices[3, 0] - vertices[0, 0]
+        self.width = vertices[3, 1] - vertices[2, 1]
+
+    def find_stoplight_center(self):
+        stoplight_center = np.mean(self.vertices[:, 1])
+        return stoplight_center
+
+    def redefine_position(self):  # Todo
+        # write code (optical flow?) to redefine stoplight location
+        vertices = None
+        self.vertices = vertices
+        return None
+
+
+class MainStoplight(Stoplight):
+    def __init__(self, status):
+        self.status = status
+
+
+if __name__ == '__main__':
+    main()
